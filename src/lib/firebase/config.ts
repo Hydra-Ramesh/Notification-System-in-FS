@@ -4,6 +4,7 @@ import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
+// These variables are expected to be set in your .env.local file
 const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
 const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -12,11 +13,15 @@ const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
 const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
 
 if (!apiKey || !authDomain || !projectId) {
+  let missingVars = [];
+  if (!apiKey) missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY");
+  if (!authDomain) missingVars.push("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN");
+  if (!projectId) missingVars.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID");
+
   throw new Error(
-    "Firebase configuration error: Missing essential environment variables. " +
-    "Please ensure NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, " +
-    "and NEXT_PUBLIC_FIREBASE_PROJECT_ID are set in your .env.local file. " +
-    "Refer to .env.example for the required variables."
+    `Firebase configuration error: Missing essential environment variables: ${missingVars.join(', ')}. ` +
+    "Please ensure these are set in your .env.local file. " +
+    "Refer to .env.local.example (if available) or Firebase project settings for the required values."
   );
 }
 
