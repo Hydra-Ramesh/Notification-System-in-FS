@@ -4,46 +4,27 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users collection
+    // Users Collection
+    // Allow users to read their own profile
+    // Allow users to create their own profile (on signup)
+    // Allow admins to read any user profile
     match /users/{userId} {
-      // Authenticated users can read their own profile
-      // Authenticated users can create their own profile (on signup)
-      // Admin users can read any user profile
       allow read: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.uid == request.auth.uid;
-      // Allow admins to update user roles (can be expanded later if needed)
-      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // More specific update/delete rules can be added later if needed
+      // For now, admin can update/delete through backend functions or console
+      allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Notifications collection
+    // Notifications Collection
+    // Allow users to read notifications intended for them (private) or broadcast to all (recipientId == null)
+    // Allow admins to create (send) notifications
     match /notifications/{notificationId} {
-      // Authenticated users can read notifications if:
-      // 1. It's a broadcast notification (recipientId is null)
-      // 2. It's a private notification for them (recipientId matches their uid)
-      // Admins can read all notifications
       allow read: if request.auth != null && 
-                    (
-                      resource.data.recipientId == null || 
-                      resource.data.recipientId == request.auth.uid ||
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-                    );
-      
-      // Only admin users can create notifications
+                    (resource.data.recipientId == request.auth.uid || resource.data.recipientId == null);
       allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      
-      // Allow users to update specific fields like 'isRead' on their notifications.
-      // This rule assumes that when a user updates a notification, they are only changing the 'isRead' status.
-      // You might need to adjust this if other fields can be updated by users.
-      allow update: if request.auth != null && 
-                      (
-                        // Allow user to update 'isRead' on their own notifications
-                        (resource.data.recipientId == request.auth.uid && request.resource.data.keys().hasOnly(['isRead', 'title', 'message', 'fileUrl', 'fileName', 'fileType', 'recipientId', 'senderId', 'timestamp'])) ||
-                        // Allow admin to update any field
-                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-                      );
-
-      // Deleting notifications might be an admin-only action
-      // allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Updates/deletes are typically admin-only actions
+      allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }
