@@ -12,12 +12,20 @@ const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
 const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
 
-if (!apiKey || !authDomain || !projectId) {
-  let missingVars = [];
-  if (!apiKey) missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY");
-  if (!authDomain) missingVars.push("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN");
-  if (!projectId) missingVars.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID");
+const requiredEnvVars = {
+  NEXT_PUBLIC_FIREBASE_API_KEY: apiKey,
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: authDomain,
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: projectId,
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: storageBucket,
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: messagingSenderId,
+  NEXT_PUBLIC_FIREBASE_APP_ID: appId,
+};
 
+const missingVars = Object.entries(requiredEnvVars)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+if (missingVars.length > 0) {
   throw new Error(
     `Firebase configuration error: Missing essential environment variables: ${missingVars.join(', ')}. ` +
     "Please ensure these are set in your .env.local file. " +
