@@ -2,6 +2,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
+import { useEffect } from 'react'; // Added import for useEffect
 import { useRouter }
 from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
