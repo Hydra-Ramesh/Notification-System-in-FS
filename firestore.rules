@@ -4,30 +4,46 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users collection:
-    // - Authenticated users can read their own profile.
-    // - Authenticated users can create their own profile upon signup.
-    // - Authenticated users can update their own profile.
-    // - Admin users can read any user profile.
-    // - Admin users can update any user profile (e.g., change roles - though role changing logic is not yet in app).
+    // Users collection
     match /users/{userId} {
+      // Authenticated users can read their own profile
+      // Authenticated users can create their own profile (on signup)
+      // Admin users can read any user profile
       allow read: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      // Delete typically handled by backend functions or restricted. For now, no direct delete from client.
-      allow delete: if false; // Or restrict to admin if needed: get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.uid == request.auth.uid;
+      // Allow admins to update user roles (can be expanded later if needed)
+      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Notifications collection:
-    // - Authenticated users can read broadcast notifications (recipientId is null).
-    // - Authenticated users can read private notifications sent to them (recipientId == request.auth.uid).
-    // - Admins can create notifications.
-    // - No direct client-side update/delete of notifications for now (can be admin-only if needed).
+    // Notifications collection
     match /notifications/{notificationId} {
-      allow read: if request.auth != null && (resource.data.recipientId == null || resource.data.recipientId == request.auth.uid);
+      // Authenticated users can read notifications if:
+      // 1. It's a broadcast notification (recipientId is null)
+      // 2. It's a private notification for them (recipientId matches their uid)
+      // Admins can read all notifications
+      allow read: if request.auth != null && 
+                    (
+                      resource.data.recipientId == null || 
+                      resource.data.recipientId == request.auth.uid ||
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+                    );
+      
+      // Only admin users can create notifications
       allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      // Update/Delete typically more controlled. For now, only admins.
-      allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Allow users to update specific fields like 'isRead' on their notifications.
+      // This rule assumes that when a user updates a notification, they are only changing the 'isRead' status.
+      // You might need to adjust this if other fields can be updated by users.
+      allow update: if request.auth != null && 
+                      (
+                        // Allow user to update 'isRead' on their own notifications
+                        (resource.data.recipientId == request.auth.uid && request.resource.data.keys().hasOnly(['isRead', 'title', 'message', 'fileUrl', 'fileName', 'fileType', 'recipientId', 'senderId', 'timestamp'])) ||
+                        // Allow admin to update any field
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+                      );
+
+      // Deleting notifications might be an admin-only action
+      // allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }

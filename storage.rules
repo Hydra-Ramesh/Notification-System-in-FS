@@ -1,0 +1,16 @@
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow admins to upload to the notifications_attachments folder
+    // Allow authenticated users to read from this folder
+    match /notifications_attachments/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+                     request.auth.token.uid != null &&
+                     exists(/databases/(default)/documents/users/$(request.auth.token.uid)) &&
+                     get(/databases/(default)/documents/users/$(request.auth.token.uid)).data.role == 'admin';
+    }
+  }
+}
